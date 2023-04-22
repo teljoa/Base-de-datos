@@ -1,0 +1,80 @@
+--1. Teniendo en cuenta los residuos generados por todas las empresas, mostrar el código del residuo que más se ha generado por todas ellas.
+SELECT COD_RESIDUO
+FROM RESIDUO_EMPRESA
+GROUP BY COD_RESIDUO 
+HAVING COUNT(COD_RESIDUO) = (SELECT MAX(COUNT(COD_RESIDUO))
+				  			 FROM RESIDUO_EMPRESA
+				  			 GROUP BY COD_RESIDUO);
+--2. Mostrar el nombre dela empresa transportista que sólo trabajó para la empresa con nif R-12356711-Q
+SELECT DISTINCT ET.NOMBRE_EMPTRANSPORTE
+FROM EMPRESATRANSPORTISTA ET, TRASLADO T
+WHERE ET.NIF_EMPTRANSPORTE =T.NIF_EMPTRANSPORTE 
+AND T.NIF_EMPTRANSPORTE = ALL (SELECT NIF_EMPTRANSPORTE 
+							   FROM TRASLADO
+							   WHERE NIF_EMPRESA LIKE 'R-12356711-Q');
+--3. Mostrar el nombre de la empresa transportitas que realizó el primer transporte que está registrado en la base de datos.
+SELECT ET.NOMBRE_EMPTRANSPORTE 
+FROM EMPRESATRANSPORTISTA ET, TRASLADO T
+WHERE ET.NIF_EMPTRANSPORTE =T.NIF_EMPTRANSPORTE 
+AND T.FECHA_ENVIO = (SELECT MIN(FECHA_ENVIO)
+					 FROM TRASLADO);
+--4. Mostrar todas las características de los traslados, para aquellos traslados cuyo coste sea superior a la media de todos los traslados.
+SELECT *
+FROM TRASLADO
+WHERE COSTE > ALL(SELECT AVG(NVL(COSTE,0))
+				  FROM TRASLADO);
+--5. Obtener el nombre de las ciudades más cercanas entre las que se ha realizado un envío.
+SELECT D.CIUDAD_DESTINO , E.CIUDAD_EMPTRANSPORTE 
+FROM DESTINO D, TRASLADO T, EMPRESATRANSPORTISTA E
+WHERE D.COD_DESTINO =T.COD_DESTINO 
+AND T.NIF_EMPTRANSPORTE =E.NIF_EMPTRANSPORTE 
+AND T.KMS = (SELECT MIN(KMS)
+			 FROM TRASLADO);
+--6. Obtener el nombre de las empresas que nunca han utilizado el Ferrocarril como medio de transporte.
+SELECT DISTINCT  E2.NOMBRE_EMPRESA  
+FROM TRASLADO T, EMPRESATRANSPORTISTA E, EMPRESAPRODUCTORA E2
+WHERE T.NIF_EMPTRANSPORTE =E.NIF_EMPTRANSPORTE
+AND T.NIF_EMPRESA =E2.NIF_EMPRESA 
+AND T.TIPO_TRANSPORTE != ALL (SELECT TIPO_TRANSPORTE
+							  FROM TRASLADO
+							  WHERE UPPER(TIPO_TRANSPORTE) LIKE 'FERROCARRIL');
+--7. Obtener el nombre de la empresa que ha realizado más envíos a Madrid.
+SELECT E.NOMBRE_EMPRESA 
+FROM EMPRESAPRODUCTORA E, TRASLADO T, DESTINO D
+WHERE E.NIF_EMPRESA =T.NIF_EMPRESA 
+AND T.COD_DESTINO =D.COD_DESTINO
+GROUP BY E.NOMBRE_EMPRESA 
+HAVING COUNT(T.NIF_EMPRESA) = (SELECT MAX(COUNT(NIF_EMPRESA))
+							   FROM TRASLADO
+							   GROUP BY NIF_EMPRESA);
+--8. Vamos a crear una nueva tabla llamada envios, que tendrá un campo llamdo Ciudad_destino, otro llamado ciudad_origen, y otro cantidad_total, en la que 
+--guardaremos donde van los residuos. La primary key de la tabla debe ser ciudad_destino y ciudad_origen, así podremos evitar que metan dos registros con la 
+--misma ciudad destino y origen.Cargar dicha tabla con los registros oportunos según nuestra base de datos, teniendo en cuenta que en cantidad total se debe 
+--guardar el total de las cantidades que se ha enviado desde ciudad_origen a ciudad_destino
+CREATE TABLE ENVIO(
+CIUDAD_DESTINO VARCHAR2(20),
+CIUDAD_ORIGEN VARCHAR2(20),
+CANTIDAD_TOTAL NUMBER(10),
+CONSTRAINT pk_env PRIMARY KEY(CIUDAD_DESTINO,CIUDAD_ORIGEN));
+
+INSERT INTO ENVIO
+SELECT D.CIUDAD_DESTINO, E.CIUDAD_EMPRESA , SUM(T.CANTIDAD) 
+FROM DESTINO D, TRASLADO T, EMPRESAPRODUCTORA E
+WHERE D.COD_DESTINO = T.COD_DESTINO 
+AND T.NIF_EMPRESA = E.NIF_EMPRESA
+GROUP BY D.CIUDAD_DESTINO, E.CIUDAD_EMPRESA;
+--9. Vamos a modificar la tabla residuo para añadir un nuevo campo llamado num_constituyentes. Una vez hayas añadido el nuevo campo crea la sentencia sql 
+--necesaria para que este campo tomen los valores adecuados.
+ALTER TABLE RESIDUO ADD NUM_CONSTITUYENTES NUMBER(6);
+
+INSERT INTO RESIDUO(NUM_CONSTITUYENTES)
+SELECT COUNT(COD_CONSTITUYENTE)
+FROM RESIDUO_CONSTITUYENTE
+GROUP BY COD_RESIDUO;
+--10. Modifica la tabla empresaproductora añadiendo un campo nuevo llamado nif, que es el nif de la empresa matriz, es decir, de la que depende, por lo que 
+--este nuevo campo será una fk sobre el campo nif_empresa. Mostrar un listado en donde salga el nombre de la empresa matriz y el nombre de la empresa de la 
+--que depende ordenado por empresa matriz. El nuevo campo llamado nif tomará valores nulos cuando se trate de una empresa que no depende de nadie. No es 
+--necesario hacer los cambios, sólo la consulta.
+ALTER TABLE EMPRESAPRODUCTORA ADD NIF VARCHAR2(12);
+ALTER TABLE EMPRESAPRODUCTORA ADD CONSTRAINT fk4_emp FOREIGN KEY(NIF)REFERENCES EMPRESAPRODUCTORA(NIF_EMPRESA);
+

@@ -1,0 +1,74 @@
+--1. Nombre de los trabajadores cuya tarifa este entre 10 y 12 euros.
+SELECT NOMBRE
+FROM TRABAJADOR
+WHERE TARIFA BETWEEN 10 AND 12;
+--2. ¿Cuáles son los oficios de los trabajadores asignados al edificio 435?
+SELECT OFICIO
+FROM TRABAJADOR T, ASIGNACION A
+WHERE T.ID_T=A.ID_T
+AND A.ID_E=435;
+--3. Indicar el nombre del trabajador y el de su supervisor.
+SELECT T1.NOMBRE, T2.NOMBRE
+FROM TRABAJADOR T1, TRABAJADOR T2
+WHERE T1.ID_T<>T2.ID_T;
+--4. Nombre de los trabajadores asignados a oficinas.
+SELECT T.NOMBRE
+FROM TRABAJADOR T, ASIGNACION A
+WHERE T.ID_T=A.ID_T;
+--5. ¿Qué trabajadores reciben una tarifa por hora mayor que la de su supervisor?
+SELECT T1.*, T2.*
+FROM TRABAJADOR T1, TRABAJADOR T2
+WHERE T1.ID_T<>T2.ID_T
+AND T1.TARIFA>T2.TARIFA;
+--6. ¿Cuál es el número total de días que se han dedicado a fontanería en el edificio 312?
+SELECT SUM(A.NUM_DIAS)
+FROM ASIGNACION A, EDIFICIO E, TRABAJADOR T
+WHERE A.ID_E=E.ID_E
+AND A.ID_T=T.ID_T
+AND T.OFICIO IN ('FONTANERO');
+--7. ¿Cuántos tipos de oficios diferentes hay?
+SELECT DISTINCT OFICIO
+FROM TRABAJADOR;
+--8. Para cada supervisor, ¿Cuál es la tarifa por hora más alta que se paga a un trabajador que informa a esesupervisor?
+SELECT MAX(TARIFA)
+FROM TRABAJADOR;
+--9. Para cada supervisor que supervisa a más de un trabajador, ¿cuál es la tarifa más alta que se para a un trabajador que informa a 
+--ese supervisor?
+SELECT MAX(TARIFA)
+FROM TRABAJADOR 
+HAVING COUNT(ID_SUPV)>1;
+--10. Para cada tipo de edificio, ¿Cuál es el nivel de calidad medio de los edificios con categoría 1? Considérense sólo aquellos 
+--tipos de edificios que tienen un nivel de calidad máximo no mayor que 3.
+SELECT AVG(NIVEL_CALIDAD)
+FROM EDIFICIO
+WHERE CATEGORIA=1
+GROUP BY TIPO
+HAVING MAX(NIVEL_CALIDAD)<3;
+--11. ¿Qué trabajadores reciben una tarifa por hora menor que la del promedio?
+SELECT ID_T
+FROM TRABAJADOR
+GROUP BY ID_T, TARIFA
+HAVING AVG(TARIFA)>TARIFA;
+--12. ¿Qué trabajadores reciben una tarifa por hora menor que la del promedio de los trabajadores que tienen su mismo oficio?
+SELECT ID_T
+FROM TRABAJADOR
+WHERE OFICIO=OFICIO
+GROUP BY ID_T, TARIFA
+HAVING AVG(TARIFA)>TARIFA;
+--13. ¿Qué trabajadores reciben una tarifa por hora menor que la del promedio de los trabajadores que dependen del mismo supervisor 
+--que él?
+SELECT ID_T
+FROM TRABAJADOR
+WHERE ID_T=ID_SUPV
+GROUP BY ID_T, TARIFA
+HAVING AVG(TARIFA)>TARIFA;
+--14. Seleccione el nombre de los electricistas asignados al edificio 435 y la fecha en la que empezaron a trabajar enél.
+SELECT T.NOMBRE, A.FECHA_INICIO
+FROM TRABAJADOR T, ASIGNACION A
+WHERE T.ID_T=A.ID_T
+AND (T.OFICIO IN ('ELETRICISTA'))
+AND (ID_E=435);
+--15. ¿Qué supervisores tienen trabajadores que tienen una tarifa por hora por encima de los 12 euros?
+SELECT ID_SUPV
+FROM TRABAJADOR
+WHERE TARIFA>12;
